@@ -112,6 +112,11 @@ def _execute_pipeline(job, config) -> None:
         job.refresh_from_db(fields=["status"])
         return job.status == CrawlJob.Status.CANCELLED
 
+    async def check_cancelled_async():
+        from asgiref.sync import sync_to_async
+        await sync_to_async(job.refresh_from_db)(fields=["status"])
+        return job.status == CrawlJob.Status.CANCELLED
+
     # ── Stage 1: Crawl ──
     job.current_stage = "Crawling"
     job.progress = 5
@@ -126,7 +131,7 @@ def _execute_pipeline(job, config) -> None:
         async def collect_crawl():
             async for result in crawler.crawl():
                 crawl_results.append(result)
-                if check_cancelled():
+                if await check_cancelled_async():
                     return
 
         loop.run_until_complete(collect_crawl())
