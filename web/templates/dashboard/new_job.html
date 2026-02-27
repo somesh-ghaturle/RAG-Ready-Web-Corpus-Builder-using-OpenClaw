@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}New Crawl Job — RAG Corpus Builder{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6">
+        <a href="{% url 'dashboard' %}" class="text-sm text-gray-500 hover:text-gray-700 transition">&larr; Back to Dashboard</a>
+        <h1 class="text-2xl font-bold text-gray-900 mt-2">Create New Crawl Job</h1>
+        <p class="text-gray-500 mt-1">Configure the pipeline and start crawling.</p>
+    </div>
+
+    {% if form.errors %}
+    <div class="mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800">
+        <p class="font-medium">Please fix the following errors:</p>
+        <ul class="mt-1 list-disc list-inside">
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                <li>{{ field }}: {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'new_job' %}" class="space-y-8">
+        {% csrf_token %}
+
+        <!-- Job Name -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Basic Info</h2>
+            <div>
+                <label for="id_name" class="block text-sm font-medium text-gray-700 mb-1">Job Name</label>
+                {{ form.name }}
+            </div>
+        </div>
+
+        <!-- Crawl Settings -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <span class="inline-flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9"/>
+                    </svg>
+                    Crawl Settings
+                </span>
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="id_seed_urls" class="block text-sm font-medium text-gray-700 mb-1">Seed URLs</label>
+                    {{ form.seed_urls }}
+                    <p class="mt-1 text-xs text-gray-500">{{ form.seed_urls.help_text }}</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_max_pages" class="block text-sm font-medium text-gray-700 mb-1">Max Pages</label>
+                        {{ form.max_pages }}
+                    </div>
+                    <div>
+                        <label for="id_max_depth" class="block text-sm font-medium text-gray-700 mb-1">Max Depth</label>
+                        {{ form.max_depth }}
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_concurrency" class="block text-sm font-medium text-gray-700 mb-1">Concurrency</label>
+                        {{ form.concurrency }}
+                    </div>
+                    <div>
+                        <label for="id_delay_seconds" class="block text-sm font-medium text-gray-700 mb-1">Delay (seconds)</label>
+                        {{ form.delay_seconds }}
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    {{ form.respect_robots }}
+                    <label for="id_respect_robots" class="text-sm font-medium text-gray-700">Respect robots.txt</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chunking Settings -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <span class="inline-flex items-center gap-2">
+                    <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                    </svg>
+                    Chunking Settings
+                </span>
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="id_chunk_strategy" class="block text-sm font-medium text-gray-700 mb-1">Strategy</label>
+                    {{ form.chunk_strategy }}
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_chunk_size" class="block text-sm font-medium text-gray-700 mb-1">Chunk Size (tokens)</label>
+                        {{ form.chunk_size }}
+                    </div>
+                    <div>
+                        <label for="id_chunk_overlap" class="block text-sm font-medium text-gray-700 mb-1">Chunk Overlap (tokens)</label>
+                        {{ form.chunk_overlap }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preprocessing Settings -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <span class="inline-flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                    </svg>
+                    Preprocessing
+                </span>
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Target Languages</label>
+                    <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        {% for checkbox in form.target_languages %}
+                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                            {{ checkbox.tag }}
+                            {{ checkbox.choice_label }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    {{ form.dedup_enabled }}
+                    <label for="id_dedup_enabled" class="text-sm font-medium text-gray-700">Enable deduplication</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Settings -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <span class="inline-flex items-center gap-2">
+                    <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Export Settings
+                </span>
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="id_export_format" class="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
+                    {{ form.export_format }}
+                </div>
+                <div class="flex items-center gap-3">
+                    {{ form.compress }}
+                    <label for="id_compress" class="text-sm font-medium text-gray-700">Compress output</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="flex items-center justify-between">
+            <a href="{% url 'dashboard' %}" class="text-sm text-gray-500 hover:text-gray-700 transition">Cancel</a>
+            <button type="submit" class="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 text-white font-semibold rounded-lg hover:bg-brand-700 transition shadow-sm text-base">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                Start Crawl
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+# ──────────────────────────────────────────────
+# RAG Corpus Builder — Pipeline Configuration
+# ──────────────────────────────────────────────
+
+crawl:
+  seed_urls:
+    - https://docs.python.org/3/tutorial/
+  max_pages: 50
+  max_depth: 2
+  concurrency: 5
+  delay_seconds: 1.0
+  timeout_seconds: 30.0
+  respect_robots_txt: true
+  user_agent: "RAGCorpusBuilder/0.1 (+https://github.com/rag-corpus-builder)"
+  allowed_domains: []          # empty = auto-detect from seed URLs
+  excluded_patterns:
+    - '.*\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot|mp4|mp3|pdf|zip|tar|gz)$'
+    - '.*/login.*'
+    - '.*/signup.*'
+  headers: {}
+
+extraction:
+  extract_tables: true
+  extract_code_blocks: true
+  extract_links: true
+  extract_metadata: true
+  min_content_length: 50
+  fallback_to_raw: true
+
+preprocess:
+  lowercase: false
+  remove_extra_whitespace: true
+  min_language_confidence: 0.8
+  target_languages:
+    - en
+  dedup_enabled: true
+  dedup_threshold: 0.95
+
+chunk:
+  strategy: recursive          # recursive | semantic | sliding_window | sentence
+  chunk_size: 512              # tokens
+  chunk_overlap: 64            # tokens
+  tokenizer: cl100k_base       # tiktoken encoding
+
+embedding:
+  enabled: false               # set to true to generate embeddings
+  model_name: all-MiniLM-L6-v2
+  batch_size: 64
+  device: cpu                  # cpu | cuda | mps
+  normalize: true
+
+export:
+  format: jsonl                # jsonl | parquet | hf_dataset
+  output_dir: output
+  filename_prefix: corpus
+  include_raw_html: false
+  include_embeddings: false
+  compress: false
+
+log_level: INFO

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Logs — {{ job.display_name }} — RAG Corpus Builder{% endblock %}
+
+{% block extra_head %}
+<style>
+    .log-viewer {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem;
+        line-height: 1.8;
+        tab-size: 4;
+    }
+    .log-line { padding: 1px 0; }
+    .log-line:hover { background: rgba(255,255,255,0.05); }
+    .log-line-num {
+        display: inline-block;
+        width: 3rem;
+        text-align: right;
+        padding-right: 0.75rem;
+        color: #4b5563;
+        user-select: none;
+        border-right: 1px solid #374151;
+        margin-right: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6 flex items-start justify-between">
+        <div>
+            <a href="{% url 'job_detail' job.id %}" class="text-sm text-gray-500 hover:text-gray-700 transition">&larr; Back to Job</a>
+            <h1 class="text-2xl font-bold text-gray-900 mt-2">Pipeline Logs</h1>
+            <p class="text-gray-500 text-sm mt-1">{{ job.display_name }}</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium
+                {% if job.status == 'completed' %}bg-green-100 text-green-700
+                {% elif job.status == 'running' %}bg-blue-100 text-blue-700
+                {% elif job.status == 'failed' %}bg-red-100 text-red-700
+                {% elif job.status == 'cancelled' %}bg-yellow-100 text-yellow-700
+                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                {{ job.status|title }}
+            </span>
+            {% if job.error_message %}
+            <span class="text-xs text-red-500 max-w-xs truncate" title="{{ job.error_message }}">{{ job.error_message|truncatechars:60 }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Log Viewer -->
+    <div class="bg-gray-900 rounded-xl shadow-lg overflow-hidden">
+        <!-- Toolbar -->
+        <div class="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                <span class="text-xs text-gray-400 ml-2">{{ log_lines|length }} lines</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="scrollToBottom()" class="text-xs text-gray-400 hover:text-white transition px-2 py-1 rounded hover:bg-gray-700">
+                    ↓ Bottom
+                </button>
+                <button onclick="copyLogs()" class="text-xs text-gray-400 hover:text-white transition px-2 py-1 rounded hover:bg-gray-700">
+                    Copy
+                </button>
+            </div>
+        </div>
+
+        <!-- Log Content -->
+        <div id="log-scroll" class="p-4 max-h-[600px] overflow-y-auto log-viewer">
+            {% if log_lines %}
+                {% for line in log_lines %}
+                <div class="log-line {% if 'ERROR' in line %}text-red-400{% elif 'WARNING' in line %}text-yellow-400{% elif 'Stage' in line or '✓' in line or '✔' in line %}text-green-400{% elif '━' in line or '─' in line %}text-gray-500{% else %}text-gray-300{% endif %}">
+                    <span class="log-line-num">{{ forloop.counter }}</span>{{ line }}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-gray-500 text-center py-12">
+                    <p class="text-sm">No log output available.</p>
+                    {% if job.status == 'pending' %}
+                    <p class="text-xs mt-1 text-gray-600">Logs will appear once the job starts.</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if job.error_message %}
+    <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+        <h3 class="text-sm font-semibold text-red-800 mb-1">Error</h3>
+        <p class="text-sm text-red-700 font-mono whitespace-pre-wrap">{{ job.error_message }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function scrollToBottom() {
+    const el = document.getElementById('log-scroll');
+    el.scrollTop = el.scrollHeight;
+}
+
+function copyLogs() {
+    const lines = document.querySelectorAll('.log-line');
+    const text = Array.from(lines).map(el => el.textContent.replace(/^\s*\d+\s*/, '')).join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = orig, 2000);
+    });
+}
+
+// Auto-scroll to bottom on load
+window.addEventListener('load', () => {
+    const el = document.getElementById('log-scroll');
+    el.scrollTop = el.scrollHeight;
+});
+
+{% if job.status == 'running' %}
+// Poll for log updates
+setInterval(async () => {
+    try {
+        const resp = await fetch("{% url 'job_status_api' job.id %}");
+        const data = await resp.json();
+        if (data.status !== 'running') {
+            location.reload();
+        }
+    } catch (e) {}
+}, 5000);
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Chunks — {{ job.display_name }} — RAG Corpus Builder{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6">
+        <a href="{% url 'job_detail' job.id %}" class="text-sm text-gray-500 hover:text-gray-700 transition">&larr; Back to Job</a>
+        <h1 class="text-2xl font-bold text-gray-900 mt-2">Chunks</h1>
+        <p class="text-gray-500 text-sm mt-1">{{ job.display_name }} · {{ total_chunks }} total chunks</p>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6">
+        <form method="get" class="flex flex-col sm:flex-row gap-3">
+            <div class="flex-1">
+                <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Search chunk text…"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none">
+            </div>
+            <div class="w-full sm:w-48">
+                <select name="source" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-white">
+                    <option value="">All sources</option>
+                    {% for url in source_urls %}
+                    <option value="{{ url }}" {% if url == selected_source %}selected{% endif %}>{{ url|truncatechars:40 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition">
+                Filter
+            </button>
+            {% if query or selected_source %}
+            <a href="{% url 'job_chunks' job.id %}" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-center">
+                Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Results info -->
+    <div class="flex items-center justify-between mb-4">
+        <p class="text-sm text-gray-500">
+            {% if query or selected_source %}
+            {{ chunks|length }} results
+            {% else %}
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            {% endif %}
+        </p>
+        <div class="text-xs text-gray-400">
+            Total tokens: {{ total_tokens|default:"0" }}
+        </div>
+    </div>
+
+    <!-- Chunk Cards -->
+    {% if chunks %}
+    <div class="space-y-3">
+        {% for chunk in chunks %}
+        <div class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+            <div class="flex items-start justify-between gap-4 mb-2">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center justify-center w-7 h-7 bg-brand-50 text-brand-700 text-xs font-bold rounded-lg">{{ chunk.chunk_index }}</span>
+                    <span class="text-xs text-gray-400 font-mono">{{ chunk.token_count }} tokens</span>
+                </div>
+                {% if chunk.document_url %}
+                <a href="{{ chunk.document_url }}" target="_blank" 
+                   class="text-xs text-gray-400 hover:text-brand-600 truncate max-w-sm transition flex items-center gap-1">
+                    <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    {{ chunk.document_url|truncatechars:60 }}
+                </a>
+                {% endif %}
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ chunk.text|truncatechars:800 }}</p>
+            {% if chunk.metadata_json %}
+            <div class="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2">
+                {% for key, value in chunk.metadata_json.items %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-md">
+                    <span class="text-gray-400">{{ key }}:</span> {{ value|truncatechars:30 }}
+                </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="mt-8 flex items-center justify-center gap-1">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_source %}&source={{ selected_source }}{% endif %}"
+           class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+            &larr; Previous
+        </a>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <span class="px-3 py-2 text-sm bg-brand-600 text-white rounded-lg font-medium">{{ num }}</span>
+            {% elif num > page_obj.number|add:"-4" and num < page_obj.number|add:"4" %}
+            <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if selected_source %}&source={{ selected_source }}{% endif %}"
+               class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                {{ num }}
+            </a>
+            {% elif num == page_obj.number|add:"-4" or num == page_obj.number|add:"4" %}
+            <span class="px-2 py-2 text-sm text-gray-400">…</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_source %}&source={{ selected_source }}{% endif %}"
+           class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+            Next &rarr;
+        </a>
+        {% endif %}
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-16 text-gray-400">
+        <svg class="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <p class="font-medium text-gray-500">No chunks found</p>
+        {% if query or selected_source %}
+        <p class="text-sm mt-1">Try adjusting your search or filters.</p>
+        {% else %}
+        <p class="text-sm mt-1">This job hasn't produced any chunks yet.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

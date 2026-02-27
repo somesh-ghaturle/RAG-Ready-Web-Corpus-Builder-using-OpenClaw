@@ -1,0 +1,36 @@
+# Byte-compiled
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Output
+output/
+*.jsonl
+*.jsonl.gz
+*.parquet
+*_dataset/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
